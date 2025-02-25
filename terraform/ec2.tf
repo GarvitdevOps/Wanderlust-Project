@@ -1,6 +1,6 @@
-resource "aws_key_pair" "deployer" {
-  key_name   = "terra-automate-key"
-  public_key = file("/Users/shubham/Documents/work/TrainWithShubham/terra-practice/terra-key.pub")
+resource "aws_key_pair" "aws_key" {
+  key_name   = "Project_key"
+  public_key = file("/home/garvit/terraform_key.pub")
 }
 
 resource "aws_default_vpc" "default" {
@@ -42,6 +42,15 @@ resource "aws_security_group" "allow_user_to_connect" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+  
+   ingress {
+    description = "port Jenkins allow"
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
 
   tags = {
     Name = "mysecurity"
@@ -51,7 +60,7 @@ resource "aws_security_group" "allow_user_to_connect" {
 resource "aws_instance" "testinstance" {
   ami             = var.ami_id
   instance_type   = var.instance_type
-  key_name        = aws_key_pair.deployer.key_name
+  key_name        = aws_key_pair.aws_key.key_name
   security_groups = [aws_security_group.allow_user_to_connect.name]
   tags = {
     Name = "Automate"
