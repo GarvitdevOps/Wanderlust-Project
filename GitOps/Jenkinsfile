@@ -56,7 +56,8 @@ pipeline {
         stage("Git: Code update and push to GitHub"){
             steps{
                 script{
-                    withCredentials([gitUsernamePassword(credentialsId: 'Github-cred', gitToolName: 'Default')]) {
+                    def credentials = gitUsernamePassword(credentialsId: 'Github-cred', gitToolName: 'Default')
+                    withCredentials([credentials]) {
                         sh '''
                         echo "Checking repository status: "
                         git status
@@ -69,19 +70,16 @@ pipeline {
                         
                         echo "Pushing changes to github: "
                         git push https://github.com/GarvitdevOps/Wanderlust-Project.git main
-                    '''
+                        '''
                     }
                 }
             }
         }
     }
-  post {
+    post {
         success {
             script {
-                emailext attachLog: true,
-                from: 'garvitmodi73505modi@gmail.com',
-                subject: "Wanderlust Application has been updated and deployed - '${currentBuild.result}'",
-                body: """
+                def emailBody = """
                     <html>
                     <body>
                         <div style="background-color: #FFA07A; padding: 10px; margin-bottom: 10px;">
@@ -95,17 +93,19 @@ pipeline {
                         </div>
                     </body>
                     </html>
-            """,
-            to: 'garvitmodi73505modi@gmail.com',
-            mimeType: 'text/html'
-            }
-        }
-      failure {
-            script {
+                """
+                
                 emailext attachLog: true,
                 from: 'garvitmodi73505modi@gmail.com',
-                subject: "Wanderlust Application build failed - '${currentBuild.result}'",
-                body: """
+                subject: "Wanderlust Application has been updated and deployed - '${currentBuild.result}'",
+                body: emailBody,
+                to: 'garvitmodi73505modi@gmail.com',
+                mimeType: 'text/html'
+            }
+        }
+        failure {
+            script {
+                def failureEmailBody = """
                     <html>
                     <body>
                         <div style="background-color: #FFA07A; padding: 10px; margin-bottom: 10px;">
@@ -116,9 +116,14 @@ pipeline {
                         </div>
                     </body>
                     </html>
-            """,
-            to: 'garvitmodi73505modi@gmail.com',
-            mimeType: 'text/html'
+                """
+                
+                emailext attachLog: true,
+                from: 'garvitmodi73505modi@gmail.com',
+                subject: "Wanderlust Application build failed - '${currentBuild.result}'",
+                body: failureEmailBody,
+                to: 'garvitmodi73505modi@gmail.com',
+                mimeType: 'text/html'
             }
         }
     }
