@@ -93,16 +93,28 @@ pipeline {
             }
         }
         
+        stage("Docker : Delete Images") {
+            steps {
+                script {
+                    // Get all image IDs
+                    sh "docker images -q | xargs -r docker rmi -f"
+                    
+                    // Alternative approach for unused images only
+                    // sh "docker image prune -af"
+                }
+            }
+        }
+        
         stage("Docker: Build Images"){
             steps{
                 script{
-                        dir('backend'){
-                            docker_build("wanderlust-backend-beta","${params.BACKEND_DOCKER_TAG}","garvmodi")
-                        }
-                    
-                        dir('frontend'){
-                            docker_build("wanderlust-frontend-beta","${params.FRONTEND_DOCKER_TAG}","garvmodi")
-                        }
+                    dir('backend'){
+                        docker_build("wanderlust-backend-beta","${params.BACKEND_DOCKER_TAG}","garvmodi")
+                    }
+                
+                    dir('frontend'){
+                        docker_build("wanderlust-frontend-beta","${params.FRONTEND_DOCKER_TAG}","garvmodi")
+                    }
                 }
             }
         }
