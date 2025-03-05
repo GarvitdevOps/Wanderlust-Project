@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: garvmodi/wanderlust-backend-beta:v1.1
+          image: garvmodi/wanderlust-backend-beta:v1.2
           ports:
             - containerPort: 8080
 ---
