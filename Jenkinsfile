@@ -2,7 +2,7 @@
 pipeline {
     agent any
     
-    environment{
+    environment {
         SONAR_HOME = tool "Sonar"
     }
     
@@ -15,76 +15,79 @@ pipeline {
         stage("Validate Parameters") {
             steps {
                 script {
-                    if (params.FRONTEND_DOCKER_TAG == '' || params.BACKEND_DOCKER_TAG == '') {
+                    if (!params.FRONTEND_DOCKER_TAG || !params.BACKEND_DOCKER_TAG) {
                         error("FRONTEND_DOCKER_TAG and BACKEND_DOCKER_TAG must be provided.")
                     }
                 }
             }
         }
-        stage("Workspace cleanup"){
-            steps{
-                script{
-                    cleanWs()
-                }
+
+        stage("Workspace Cleanup") {
+            steps {
+                cleanWs()
             }
         }
         
         stage('Git: Code Checkout') {
             steps {
-                script{
-                    code_checkout("https://github.com/GarvitdevOps/Wanderlust-Project.git","main")
+                script {
+                    code_checkout("https://github.com/GarvitdevOps/Wanderlust-Project.git", "main")
                 }
             }
         }
         
-        stage("Trivy: Filesystem scan"){
-            steps{
-                script{
-                    trivy_scan()
+        stage("Security Scans") {
+            parallel {
+                stage("Trivy: Filesystem Scan") {
+                    steps {
+                        script {
+                            trivy_scan()
+                        }
+                    }
                 }
-            }
-        }
-
-        stage("OWASP: Dependency check"){
-            steps{
-                script{
-                    owasp_dependency()
-                }
-            }
-        }
-        
-        stage("SonarQube: Code Analysis"){
-            steps{
-                script{
-                    sonarqube_analysis("Sonar","wanderlust","wanderlust")
+                
+                stage("OWASP: Dependency Check") {
+                    steps {
+                        script {
+                            owasp_dependency()
+                        }
+                    }
                 }
             }
         }
         
-        stage("SonarQube: Code Quality Gates"){
-            steps{
-                script{
+        stage("SonarQube: Code Analysis") {
+            steps {
+                script {
+                    sonarqube_analysis("Sonar", "wanderlust", "wanderlust")
+                }
+            }
+        }
+        
+        stage("SonarQube: Code Quality Gates") {
+            steps {
+                script {
                     sonarqube_code_quality()
                 }
             }
         }
         
-        stage('Exporting environment variables') {
-            parallel{
-                stage("Backend env setup"){
+        stage('Exporting Environment Variables') {
+            parallel {
+                stage("Backend Env Setup") {
                     steps {
-                        script{
-                            dir("Automations"){
+                        script {
+                            dir("Automations") {
                                 sh "bash updatebackendnew.sh"
                             }
                         }
                     }
                 }
                 
-                stage("Frontend env setup"){
+                stage("Frontend Env Setup") {
                     steps {
-                        script{
-                            dir("Automations"){
+                        script {
+                            dir("Automations") {
                                 sh "bash updatefrontendnew.sh"
                             }
                         }
@@ -93,43 +96,35 @@ pipeline {
             }
         }
         
-        stage("Docker : Delete Images") {
-            steps {
-                script {
-                    // Get all image IDs
-                    sh "docker images -q | xargs -r docker rmi -f"
-                    
-                    // Alternative approach for unused images only
-                    // sh "docker image prune -af"
-                }
-            }
-        }
-        
-        stage("Docker: Build Images"){
-            steps{
-                script{
-                    dir('backend'){
-                        docker_build("wanderlust-backend-beta","${params.BACKEND_DOCKER_TAG}","garvmodi")
+        stage("Docker: Build and Push Images") {
+            parallel {
+                stage("Backend Build & Push") {
+                    steps {
+                        script {
+                            dir('backend') {
+                                docker_build("wanderlust-backend-beta", "${params.BACKEND_DOCKER_TAG}", "garvmodi")
+                            }
+                            docker_push("wanderlust-backend-beta", "${params.BACKEND_DOCKER_TAG}", "garvmodi")
+                        }
                     }
+                }
                 
-                    dir('frontend'){
-                        docker_build("wanderlust-frontend-beta","${params.FRONTEND_DOCKER_TAG}","garvmodi")
+                stage("Frontend Build & Push") {
+                    steps {
+                        script {
+                            dir('frontend') {
+                                docker_build("wanderlust-frontend-beta", "${params.FRONTEND_DOCKER_TAG}", "garvmodi")
+                            }
+                            docker_push("wanderlust-frontend-beta", "${params.FRONTEND_DOCKER_TAG}", "garvmodi")
+                        }
                     }
-                }
-            }
-        }
-        
-        stage("Docker: Push to DockerHub"){
-            steps{
-                script{
-                    docker_push("wanderlust-backend-beta","${params.BACKEND_DOCKER_TAG}","garvmodi") 
-                    docker_push("wanderlust-frontend-beta","${params.FRONTEND_DOCKER_TAG}","garvmodi")
                 }
             }
         }
     }
-    post{
-        success{
+    
+    post {
+        success {
             archiveArtifacts artifacts: '*.xml', followSymlinks: false
             build job: "Wanderlust-CD", parameters: [
                 string(name: 'FRONTEND_DOCKER_TAG', value: "${params.FRONTEND_DOCKER_TAG}"),
@@ -138,3 +133,4 @@ pipeline {
         }
     }
 }
+
